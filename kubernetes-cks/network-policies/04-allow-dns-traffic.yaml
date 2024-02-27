@@ -1,0 +1,19 @@
+# deny all incoming and outgoing traffic from all pods in namespace default
+# but allows DNS traffic
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: deny
+  namespace: default
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+  egress:
+    - to:
+      ports:
+        - port: 53
+          protocol: TCP
+        - port: 53
+          protocol: UDP

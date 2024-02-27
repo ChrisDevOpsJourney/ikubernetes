@@ -1,0 +1,46 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: books.example.com
+spec:
+  conversion:
+    strategy: None
+  group: example.com
+  names:
+    kind: Book
+    listKind: BookList
+    plural: books
+    shortNames:
+    - bk
+    singular: books
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - description: Experiment status
+      jsonPath: .status.phase
+      name: Status
+      type: string
+    - description: Time since resource was created
+      jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        properties:
+          author:
+            maxLength: 50
+            minLength: 1
+            type: string
+          title:
+            maxLength: 100
+            minLength: 1
+            type: string
+          year:
+            maximum: 2100
+            minimum: 1900
+            type: integer
+        type: object
+    served: true
+    storage: true
+    subresources: {}

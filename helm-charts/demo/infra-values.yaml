@@ -1,0 +1,51 @@
+ingress:
+  enabled: false
+  className: ""
+  annotations:
+    alb.ingress.kubernetes.io/load-balancer-name: "demo-alb"
+    alb.ingress.kubernetes.io/schema: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/ssl-redirect: "443"
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS": 443}]'
+    alb.ingress.kubernetes.io/healthcheck-port: "9000"
+    alb.ingress.kubernetes.io/healthcheck-path: /ping
+    alb.ingress.kubernetes.io/subnets: subnet-1, subnet-2, subnet-3
+    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:us-east-1:00000000:certificate/0000-1111-2222-3333
+    # kubernetes.io/ingress.class: nginx
+    # kubernetes.io/tls-acme: "true"
+  hosts:
+    - host: nginx.qa.demo.com
+      paths:
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              name: traefik
+              port:
+                number: 80
+  tls: []
+  #  - secretName: chart-example-tls
+  #    hosts:
+  #      - chart-example.local
+
+ingressRoute:
+  active:
+    enabled: false
+    name: ingressroute
+    domainName: "qa.demo.com"
+  preview:
+    enabled: true
+    name: ingresroute-preview
+    domainName: "qa-preview.demo.com"
+
+scheduler:
+  enabled: false  # Set to false for production
+  image: xxxx/sheduler:v1
+  scaleInPolicy:
+    namespace: dev
+    schedule: "20 15 * * 1-5"
+    replicas: 0
+  scaleOutPolicy:
+    namespace: dev
+    schedule: "05 1 * * 1-5"
+    replicas: 1

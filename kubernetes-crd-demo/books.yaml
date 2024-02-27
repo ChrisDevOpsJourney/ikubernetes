@@ -1,0 +1,8 @@
+apiVersion: example.com/v1alpha1
+kind: Book
+metadata:
+  name: demo-book
+  namespace: default
+author: "Yevgeniy Brikman"
+title: "Terraform Up and Running"
+year: 2019

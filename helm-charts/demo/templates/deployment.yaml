@@ -1,0 +1,94 @@
+{{- $top := . -}}
+{{- range $deployment := .Values.deploymentList -}}
+
+apiVersion: {{ $top.Values.commonConfig.apiVersion | default "apps/v1"}}
+kind: {{ $top.Values.commonConfig.resourceKind | default "Deployment"}}
+metadata:
+  name: {{ $deployment.name }}
+  labels:
+    app: {{ $deployment.name }}
+    environment: {{ $top.Values.commonConfig.environment}}
+spec:
+  replicas: {{ $deployment.replicas | default 1}}
+  selector:
+    matchLabels:
+      app: {{ $deployment.name }}
+      environment: {{ $top.Values.commonConfig.environment}}
+  template:
+    metadata:
+      {{- with $top.Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        app: {{ $deployment.name }}
+        environment: {{ $top.Values.commonConfig.environment}}
+        {{- if $top.Values.commonConfig.useTimeStampAsLabel }}
+        timestamp: {{ $top.Values.commonConfig.timeStamp | quote }}
+        {{- end }}
+    spec:
+      {{- with $top.Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "demo.serviceAccountName" $top }}
+      securityContext:
+        {{- toYaml $.Values.podSecurityContext | nindent 8 }}
+      containers:
+        - env:
+        {{- if $deployment.extraEnvs }}
+        {{- include "demo.tplvalues.render" (dict "value" $deployment.extraEnvs "context" $ ) | nindent 10 }}
+        {{- end }}
+        {{- if $deployment.cm }}
+          envFrom:
+            - configMapRef:
+                name: {{ $deployment.cm}}
+        {{- end }}
+          name: {{ $deployment.name }}
+          securityContext:
+            {{- toYaml $top.Values.securityContext | nindent 12 }}
+          image: {{ $deployment.repository | default $top.Values.commonConfig.repository}}/{{$deployment.name}}:{{$deployment.imageTag}}
+          imagePullPolicy: {{ $top.Values.imagePullPolicy | default "IfNotPresent"}}
+          ports:
+            - name: http
+              containerPort: {{$deployment.containerPort | default 8080 | quote}}
+              protocol: TCP
+          startupProbe:
+            httpGet:
+              path: /
+              port: http
+            periodSeconds: 10
+            failureThreshold: 30
+            successThreshold: 1
+            timeoutSeconds: 3
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            periodSeconds: 3
+            successThreshold: 1
+            timeoutSeconds: 3
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            periodSeconds: 3
+            successThreshold: 1
+            timeoutSeconds: 3
+          resources:
+            limits:
+              cpu: {{$deployment.cpuAllocated | default "1"}}
+              memory: {{$deployment.memAllocated | default "1024Mi"}}
+            requests:
+              cpu: {{$deployment.cpuAllocated | default "1"}}
+              memory: {{$deployment.memAllocated | default "1024Mi"}}
+  {{- if eq $top.Values.commonConfig.resourceKind "Rollout"}}
+  strategy:
+    blueGreen:
+      activeService: {{ $deployment.name }}
+      previewService: {{ $deployment.name}}-preview
+      {{- toYaml $top.Values.strategy.Rollout.blueGreen | nindent 6}}
+
+  {{- end}}
+---
+{{- end }}

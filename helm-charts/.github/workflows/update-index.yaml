@@ -1,0 +1,38 @@
+name: Update Helm Chart Index
+
+on:
+  # push:
+  #   branches: [main]
+  #   paths:
+  #     - '**.tgz'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Git checkout
+        uses: action/checkout@v4
+        with:
+          ref: develop
+          # path: .
+
+      - name: Helm installation
+        uses: azure/setup-helm@v1.1
+        with:
+          version: v3.10.1
+
+      - name: Helm Package
+        run: helm package demo --version "0.1.0+$(git rev-parse --short "$GITHUB_SHA")" -d helm-charts
+      
+      - name: Update Index
+        run: |
+          helm repo index .
+      
+      - name: Create Pull Request
+        id: cpr
+        uses: peter-evans/create-pull-request@v5
+        with:
+          commit-message: Update helm chart index
+          title: Update helm chart index
+          body: Update helm chart index to include new chart version

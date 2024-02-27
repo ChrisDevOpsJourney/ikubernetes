@@ -1,0 +1,24 @@
+apiVersion: v1
+entries:
+  demo:
+  - apiVersion: v2
+    appVersion: 1.0.0
+    created: "2023-11-25T10:42:08.54342808+08:00"
+    description: A Helm chart for Kubernetes
+    digest: 0aaf64ce53573b082edf7407420be3bd784ab14b96d547c37428a301e3f4a654
+    name: demo
+    type: application
+    urls:
+    - demo-0.1.5.tgz
+    version: 0.1.5
+  - apiVersion: v2
+    appVersion: 1.0.0
+    created: "2023-11-25T10:42:08.543148756+08:00"
+    description: A Helm chart for Kubernetes
+    digest: efcd5c5f1e0c54fba96a53840ea2ef601f8ebcb9bc7292dc61d68adc5499ece0
+    name: demo
+    type: application
+    urls:
+    - demo-0.1.3.tgz
+    version: 0.1.3
+generated: "2023-11-25T10:42:08.542759286+08:00"

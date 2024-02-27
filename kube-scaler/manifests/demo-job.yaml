@@ -1,0 +1,51 @@
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: daily-scale-out
+spec:
+  schedule: "05 13 * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          serviceAccountName: kube-scaler-sa
+          containers:
+            - name: simplescaler
+              image: ghcr.io/chrisdevopsorg/kubenetes-simple-scaler:latest
+              imagePullPolicy: Always
+              env:
+                - name: NAMESPACE
+                  value: "default"
+                - name: REPLICAS
+                  value: "1"
+                - name: USE_IN_CLUSTER_CLIENT
+                  value: "true"
+                - name: RESOURCE_KIND
+                  value: "DEPLOYMENT"
+          restartPolicy: OnFailure
+---
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: daily-scale-in
+spec:
+  schedule: "10 13 * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          serviceAccountName: kube-scaler-sa
+          containers:
+            - name: simplescaler
+              image: ghcr.io/chrisdevopsorg/kubenetes-simple-scaler:latest
+              imagePullPolicy: Always
+              env:
+                - name: NAMESPACE
+                  value: "default"
+                - name: REPLICAS
+                  value: "0"
+                - name: USE_IN_CLUSTER_CLIENT
+                  value: "true"
+                - name: RESOURCE_KIND
+                  value: "DEPLOYMENT"
+          restartPolicy: OnFailure
