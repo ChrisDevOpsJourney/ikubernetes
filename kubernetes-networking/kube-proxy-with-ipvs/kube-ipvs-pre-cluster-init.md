@@ -92,8 +92,7 @@ sudo chown $(id -u):$(id -g) $HOME/.kube/config
 
 ```shell
 #Download Calico CNI
-curl https://docs.projectcalico.org/manifests/calico.yaml > calico.yaml
-
+curl https://raw.githubusercontent.com/projectcalico/calico/v3.27.2/manifests/calico.yaml -O
 #Apply Calico CNI
 kubectl apply -f ./calico.yaml
 ```
