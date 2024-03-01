@@ -25,7 +25,7 @@ echo 'deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.
 ```
 ```shell
 #Install all of the necessary Kubernetes components with the command:
-sudo get update
+sudo apt-get update
 sudo apt-get install kubeadm kubelet kubectl ipvsadm containerd -y
 ```
 ```shell
