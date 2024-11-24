@@ -105,9 +105,9 @@ rm cilium-linux-amd64.tar.gz{,.sha256sum}
 helm repo add cilium https://helm.cilium.io/
 
 #Deploy Cilium release via Helm:
-helm install cilium cilium/cilium 
+helm install cilium cilium/cilium \
     --namespace kube-system \
-    --set kubeProxyReplacement=strict \
+    --set kubeProxyReplacement=true \
     --set k8sServiceHost=@$master \
     --set k8sServicePort=6443
 ```
