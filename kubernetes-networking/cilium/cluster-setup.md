@@ -108,7 +108,7 @@ helm repo add cilium https://helm.cilium.io/
 helm install cilium cilium/cilium \
     --namespace kube-system \
     --set kubeProxyReplacement=true \
-    --set k8sServiceHost=@$master \
+    --set k8sServiceHost=$master \
     --set k8sServicePort=6443
 ```
 
