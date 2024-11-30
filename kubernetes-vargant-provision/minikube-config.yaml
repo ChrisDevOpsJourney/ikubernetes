@@ -1,0 +1,5 @@
+apiVersion: kubeadm.k8s.io/v1beta3
+kind: ClusterConfiguration
+networking:
+  podSubnet: "192.168.16.0/20"
+  serviceSubnet: "172.16.20.0/20"
