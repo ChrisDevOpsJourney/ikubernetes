@@ -1,6 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="VcsDirectoryMappings">
-    <mapping directory="" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/helm-charts" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/kube-scaler" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/kubernetes-cks" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/kubernetes-crd-demo" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/kubernetes-vargant-provision" vcs="Git" />
   </component>
 </project>

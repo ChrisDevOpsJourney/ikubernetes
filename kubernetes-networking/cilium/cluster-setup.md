@@ -1,4 +1,5 @@
 Environment Info
+
 - Ubuntu22.04 - 5.15.0-97-generic
 - kubernetes 1.29
 - ipvsadm v1.31
@@ -18,20 +19,22 @@ sudo apt-get install -y apt-transport-https ca-certificates curl gpg
 ```shell
 # If the folder `/etc/apt/keyrings` does not exist, it should be created before the curl command, read the note below.
 # sudo mkdir -p -m 755 /etc/apt/keyrings
-curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.29/deb/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.31/deb/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
 
 ```
 
 ```shell
 # This overwrites any existing configuration in /etc/apt/sources.list.d/kubernetes.list
-echo 'deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.29/deb/ /' | sudo tee /etc/apt/sources.list.d/kubernetes.list
+echo 'deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.31/deb/ /' | sudo tee /etc/apt/sources.list.d/kubernetes.list
 
 ```
+
 ```shell
 #Install all of the necessary Kubernetes components with the command:
 sudo apt-get update
 sudo apt-get install kubeadm kubelet kubectl ipvsadm containerd -y
 ```
+
 ```shell
 #Configure containerd and start the service
 sudo mkdir -p /etc/containerd
@@ -79,6 +82,7 @@ sudo kubeadm config images pull
 ```
 
 **########## This section must be run only on master node ######### **
+
 ```shell
 #Make sure "kube-proxy" is not installed, we want cilium to use the new "eBPF" based proxy
 sudo kubeadm init --skip-phases=addon/kube-proxy
@@ -105,11 +109,12 @@ rm cilium-linux-amd64.tar.gz{,.sha256sum}
 helm repo add cilium https://helm.cilium.io/
 
 #Deploy Cilium release via Helm:
-helm install cilium cilium/cilium 
+helm install cilium cilium/cilium \
     --namespace kube-system \
     --set kubeProxyReplacement=strict \
-    --set k8sServiceHost=@$master \
-    --set k8sServicePort=6443
+    --set k8sServiceHost=$master \
+    --set k8sServicePort=6443 \
+    --set kubeProxyReplacement=true
 ```
 
 ```shell
@@ -160,7 +165,7 @@ curl http://$master:$NODEPORT
 
 ```
 
-**########## Setup Hubble**########## 
+**########## Setup Hubble**##########
 
 ```shell
 cilium hubble enable
@@ -188,10 +193,10 @@ hubble status
     kubectl get secrets -n kube-system hubble-ca-secret -o yaml | sed -e 's/name: hubble-ca-secret/name: cilium-ca/;/\(resourceVersion\|uid\)/d' | kubectl apply -f -
     cilium hubble disable
     cilium hubble enable
-    #Please note that the next time the hubble-generate-certs CronJob runs, 
-    #it will override the TLS certificates for both Hubble and Relay signing them with hubble-ca-secret (i.e. not ciliium-ca). 
+    #Please note that the next time the hubble-generate-certs CronJob runs,
+    #it will override the TLS certificates for both Hubble and Relay signing them with hubble-ca-secret (i.e. not ciliium-ca).
     #Relay should continue to work, but this could bring more incompatibility with the CLI (e.g. if you were to disable then re-enable Hubble again through the CLI).
-    cilium hubble port-forward&
+    cilium hubble port-forward &
     hubble status
     hubble observe
 
