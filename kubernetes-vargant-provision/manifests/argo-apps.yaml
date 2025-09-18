@@ -1,0 +1,153 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: longhorn
+  namespace: argocd
+  finalizers:
+    - argoproj.io/resources-finalizer
+spec:
+  project: default
+  source:
+    repoURL: https://charts.longhorn.io
+    targetRevision: 1.9.1
+    helm:
+      parameters:
+        - name: preUpgradeChecker.jobEnabled
+          value: 'false'
+    chart: longhorn
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: longhorn-system
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: false
+      enabled: true
+    syncOptions:
+      - CreateNamespace=true
+      - ApplyOutOfSyncOnly=true
+      - ServerSideApply=true
+      - PruneLast=true
+
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  namespace: argocd
+  name: istio-base
+  finalizers:
+    - argoproj.io/resources-finalizer
+spec:
+  destination:
+    namespace: istio-system
+    server: https://kubernetes.default.svc
+  source:
+    path: ''
+    repoURL: https://istio-release.storage.googleapis.com/charts
+    targetRevision: 1.27.1
+    chart: base
+  sources: []
+  project: default
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      enabled: true
+    syncOptions:
+      - PruneLast=true
+      - ServerSideApply=true
+      - ApplyOutOfSyncOnly=true
+      - CreateNamespace=true
+    retry:
+      limit: 2
+      backoff:
+        duration: 5s
+        maxDuration: 3m0s
+        factor: 2
+  ignoreDifferences:
+    - group: admissionregistration.k8s.io
+      kind: ValidatingWebhookConfiguration
+      name: rev.validation.istio.io
+      jsonPointers:
+        - /webhooks/0/failurePolicy
+        - /webhooks/1/failurePolicy
+
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  namespace: argocd
+  name: istiod
+  finalizers:
+    - argoproj.io/resources-finalizer
+  # annotations:
+    # notifications.argoproj.io/subscribe.on-sync-failed.telegram: "811709757"
+    # notifications.argoproj.io/subscribe.on-out-of-sync.telegram: "811709757"
+spec:
+  destination:
+    namespace: istio-system
+    server: https://kubernetes.default.svc
+  source:
+    path: ''
+    repoURL: https://istio-release.storage.googleapis.com/charts
+    targetRevision: 1.27.1
+    chart: istiod
+  sources: []
+  project: default
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: false
+      enabled: true
+    syncOptions:
+      - CreateNamespace=true
+      - ApplyOutOfSyncOnly=true
+      - ServerSideApply=true
+      - PruneLast=true
+  ignoreDifferences:
+    - group: admissionregistration.k8s.io
+      kind: ValidatingWebhookConfiguration
+      name: rev.validation.istio.io
+      jsonPointers:
+        - /webhooks/0/failurePolicy
+        - /webhooks/1/failurePolicy
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: istio-gateway
+  namespace: argocd
+  finalizers:
+    - argoproj.io/resources-finalizer
+spec:
+  destination:
+    namespace: istio-system
+    server: https://kubernetes.default.svc
+  source:
+    path: ''
+    repoURL: https://istio-release.storage.googleapis.com/charts
+    targetRevision: 1.27.1
+    chart: gateway
+    helm:
+      parameters:
+        - name: _internal_defaults_do_not_set.service.type
+          value: NodePort
+  sources: []
+  project: default
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: false
+      enabled: true
+    syncOptions:
+      - Validate=false
+      - PruneLast=true
+      - CreateNamespace=true
+      - ApplyOutOfSyncOnly=true
+      - ServerSideApply=true
+    retry:
+      limit: 2
+      backoff:
+        duration: 5s
+        maxDuration: 3m0s
+        factor: 2

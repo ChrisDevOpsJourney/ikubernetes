@@ -1,0 +1,44 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name: kargo-gateway
+  namespace: istio-system
+spec:
+  selector:
+    istio: gateway
+  servers:
+  - port:
+      number: 80
+      name: http
+      protocol: HTTP
+    hosts:
+    - kargo.sandbox.com
+  - port:
+      number: 443
+      name: https
+      protocol: HTTPS
+    tls:
+      mode: SIMPLE
+      credentialName: kargo-tls-secret
+    hosts:
+    - kargo.sandbox.com
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: kargo-virtualservice
+  namespace: kargo
+spec:
+  hosts:
+  - kargo.sandbox.com
+  gateways:
+  - istio-system/kargo-gateway
+  http:
+  - match:
+    - uri:
+        prefix: /
+    route:
+    - destination:
+        host: kargo-api.kargo.svc.cluster.local
+        port:
+          number: 80

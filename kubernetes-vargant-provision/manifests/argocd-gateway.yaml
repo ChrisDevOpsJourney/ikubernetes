@@ -1,0 +1,55 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name: argocd-gateway
+  namespace: istio-system
+spec:
+  selector:
+    istio: gateway
+  servers:
+  - port:
+      number: 80
+      name: http
+      protocol: HTTP
+    hosts:
+    - argocd.sandbox.com
+  - port:
+      number: 443
+      name: https
+      protocol: HTTPS
+    tls:
+      mode: SIMPLE
+      credentialName: argocd-tls-secret
+    hosts:
+    - argocd.sandbox.com
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: argocd-virtualservice
+  namespace: argocd
+spec:
+  hosts:
+  - argocd.sandbox.com
+  gateways:
+  - istio-system/argocd-gateway
+  http:
+  - match:
+    - uri:
+        prefix: /
+      headers:
+        content-type:
+          exact: application/grpc
+    route:
+    - destination:
+        host: argocd-server.argocd.svc.cluster.local
+        port:
+          number: 80
+  - match:
+    - uri:
+        prefix: /
+    route:
+    - destination:
+        host: argocd-server.argocd.svc.cluster.local
+        port:
+          number: 80

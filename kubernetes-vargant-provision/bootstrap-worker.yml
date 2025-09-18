@@ -1,0 +1,122 @@
+- name: Kubernetes Worker Node Setup
+  hosts: workers
+  become: yes
+  tasks:
+    - name: Check if worker already joined
+      stat:
+        path: /etc/kubernetes/kubelet.conf
+      register: kubelet_conf
+
+    - name: Reset kubeadm if already joined
+      command: kubeadm reset -f
+      when: not kubelet_conf.stat.exists
+      ignore_errors: true
+
+    - name: Validate existing join token on master
+      shell: |
+        if [ -f /tmp/joincluster.sh ]; then
+          TOKEN=$(grep -oP '(?<=--token )[^ ]+' /tmp/joincluster.sh)
+          kubeadm token list | grep -q $TOKEN
+        else
+          exit 1
+        fi
+      delegate_to: kmaster
+      register: token_valid
+      ignore_errors: yes
+      when: kubelet_conf.stat.exists
+
+    - name: Generate join script on master (if token missing/expired)
+      shell: kubeadm token create --print-join-command > /tmp/joincluster.sh
+      delegate_to: kmaster
+      register: generate_join
+      when: not kubelet_conf.stat.exists or token_valid.rc != 0
+
+    - name: Slurp join script from master
+      slurp:
+        src: /tmp/joincluster.sh
+      delegate_to: kmaster
+      register: join_script
+      when: not kubelet_conf.stat.exists or token_valid.rc != 0
+
+    - name: Write join script to worker
+      copy:
+        dest: /tmp/joincluster.sh
+        content: "{{ join_script.content | b64decode }}"
+        mode: '0755'
+      when: not kubelet_conf.stat.exists or token_valid.rc != 0
+
+    - name: Execute join script
+      command: sh /tmp/joincluster.sh
+      when: kubelet_conf.stat.exists == false or token_valid.rc != 0
+
+    - name: ArgoCD & Istio setup (run once on kmaster via worker4)
+      block:
+        - name: Copy Argo manifests to master
+          copy:
+            src: manifests/
+            dest: /tmp/manifests/
+            owner: root
+            group: root
+            mode: '0644'
+            remote_src: no
+
+        - name: Create argocd namespace
+          command: kubectl apply -f /tmp/manifests/namespace.yaml
+
+        - name: Install ArgoCD using official manifests
+          command: kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+          args:
+            creates: /tmp/argocd-installed.marker
+          register: argocd_install
+          changed_when: "'configured' in argocd_install.stdout or 'created' in argocd_install.stdout"
+
+        - name: Create marker file for ArgoCD installation
+          file:
+            path: /tmp/argocd-installed.marker
+            state: touch
+
+        - name: Configure ArgoCD repositories
+          command: kubectl apply -f /tmp/manifests/argo-repos.yaml
+
+        - name: Apply ArgoCD Applications (longhorn, istio)
+          command: kubectl apply -f /tmp/manifests/argo-apps.yaml
+
+        - name: Wait 60 seconds before applying other service
+          ansible.builtin.pause:
+            seconds: 60
+
+        - name: Apply gateway service for ArgoCD
+          command: kubectl apply -f /tmp/manifests/argocd-gateway.yaml
+
+        - name: Configure ArgoCD server in insecure mode for HTTP access
+          command: kubectl patch configmap argocd-cmd-params-cm -n argocd --patch '{"data":{"server.insecure":"true"}}'
+
+        - name: Restart ArgoCD server to apply insecure mode
+          command: kubectl rollout restart deployment argocd-server -n argocd
+
+        - name: Patch Istio Gateway NodePort service
+          command: kubectl patch service istio-gateway -n istio-system --type='merge' -p '{"spec":{"ports":[{"name":"http2","port":80,"targetPort":80,"nodePort":30080},{"name":"https","port":443,"targetPort":443,"nodePort":30443},{"name":"status-port","port":15021,"targetPort":15021,"nodePort":31713}]}}'
+          args:
+            creates: /tmp/istio-gateway-patched.marker
+
+        - name: Create marker file for Istio NodePort patch
+          file:
+            path: /tmp/istio-gateway-patched.marker
+            state: touch
+
+        - name: Get ArgoCD admin password (decoded)
+          shell: kubectl get secret argocd-initial-admin-secret -n argocd -o jsonpath="{.data.password}" | base64 --decode
+          register: argocd_admin_password
+
+        - name: Print ArgoCD admin password
+          debug:
+            msg: "{{ argocd_admin_password.stdout }}"
+
+        - name: Create marker file for first run
+          file:
+            path: /tmp/argocd-password.marker
+            state: touch
+
+      run_once: true
+      delegate_to: kmaster
+      when: inventory_hostname == "kworker4"

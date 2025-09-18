@@ -1,0 +1,45 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name: longhorn-gateway
+  namespace: istio-system
+spec:
+  selector:
+    istio: gateway
+  servers:
+  - port:
+      number: 80
+      name: http
+      protocol: HTTP
+    hosts:
+    - longhorn.sandbox.com
+  - port:
+      number: 443
+      name: https
+      protocol: HTTPS
+    tls:
+      mode: SIMPLE
+      credentialName: longhorn-tls-secret
+    hosts:
+    - longhorn.sandbox.com
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: longhorn-virtualservice
+  namespace: longhorn-system
+spec:
+  hosts:
+  - longhorn.sandbox.com
+  gateways:
+  - istio-system/longhorn-gateway
+  http:
+  - match:
+    - uri:
+        prefix: /
+    route:
+    - destination:
+        host: longhorn-frontend.longhorn-system.svc.cluster.local
+        port:
+          number: 80ll
+          

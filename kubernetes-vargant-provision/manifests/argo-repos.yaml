@@ -1,0 +1,117 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: istio
+  namespace: argocd
+  annotations:
+    managed-by: argocd.argoproj.io
+  labels:
+    argocd.argoproj.io/secret-type: repository
+type: Opaque
+data:
+  name: aXN0aW8=
+  project: ZGVmYXVsdA==
+  type: aGVsbQ==
+  url: aHR0cHM6Ly9pc3Rpby1yZWxlYXNlLnN0b3JhZ2UuZ29vZ2xlYXBpcy5jb20vY2hhcnRz
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: bitnami
+  namespace: argocd
+  annotations:
+    managed-by: argocd.argoproj.io
+  labels:
+    argocd.argoproj.io/secret-type: repository
+type: Opaque
+data:
+  name: Yml0bmFtaQ==
+  project: ZGVmYXVsdA==
+  type: aGVsbQ==
+  url: aHR0cHM6Ly9jaGFydHMuYml0bmFtaS5jb20vYml0bmFtaQ==
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: traefik
+  namespace: argocd
+  annotations:
+    managed-by: argocd.argoproj.io
+  labels:
+    argocd.argoproj.io/secret-type: repository
+type: Opaque
+data:
+  name: dHJhZWZpaw==
+  project: ZGVmYXVsdA==
+  type: aGVsbQ==
+  url: aHR0cHM6Ly90cmFlZmlrLmdpdGh1Yi5pby9jaGFydHM=
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: prometheus
+  namespace: argocd
+  annotations:
+    managed-by: argocd.argoproj.io
+  labels:
+    argocd.argoproj.io/secret-type: repository
+type: Opaque
+data:
+  name: cHJvbWV0aGV1cw==
+  project: ZGVmYXVsdA==
+  type: aGVsbQ==
+  url: aHR0cHM6Ly9wcm9tZXRoZXVzLWNvbW11bml0eS5naXRodWIuaW8vaGVsbS1jaGFydHM=
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: kyverno
+  namespace: argocd
+  annotations:
+    managed-by: argocd.argoproj.io
+  labels:
+    argocd.argoproj.io/secret-type: repository
+type: Opaque
+data:
+  name: a3l2ZXJubw==
+  project: ZGVmYXVsdA==
+  type: aGVsbQ==
+  url: aHR0cHM6Ly9reXZlcm5vLmdpdGh1Yi5pby9reXZlcm5vLw==
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: argo
+  namespace: argocd
+  annotations:
+    managed-by: argocd.argoproj.io
+  labels:
+    argocd.argoproj.io/secret-type: repository
+type: Opaque
+data:
+  name: YXJnbw==
+  project: ZGVmYXVsdA==
+  type: aGVsbQ==
+  url: aHR0cHM6Ly9hcmdvcHJvai5naXRodWIuaW8vYXJnby1oZWxt
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: longhorn
+  namespace: argocd
+  annotations:
+    managed-by: argocd.argoproj.io
+  labels:
+    argocd.argoproj.io/secret-type: repository
+type: Opaque
+data:
+  name: bG9uZ2hvcm4=
+  project: ZGVmYXVsdA==
+  type: aGVsbQ==
+  url: aHR0cHM6Ly9jaGFydHMubG9uZ2hvcm4uaW8=

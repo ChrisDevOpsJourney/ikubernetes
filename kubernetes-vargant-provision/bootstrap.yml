@@ -1,0 +1,174 @@
+---
+- name: Kubernetes Node Setup
+  hosts: all
+  become: yes
+  tasks:
+    - name: Disable and turn off SWAP
+      shell: |
+        sed -i '/swap/d' /etc/fstab
+        swapoff -a
+
+    - name: Stop and Disable firewall
+      systemd:
+        name: ufw
+        state: stopped
+        enabled: no
+
+    - name: Enable and Load Kernel modules
+      copy:
+        dest: /etc/modules-load.d/containerd.conf
+        content: |
+          overlay
+          br_netfilter
+      notify: Load Kernel Modules
+
+    - name: Add Kernel settings
+      copy:
+        dest: /etc/sysctl.d/k8s.conf
+        content: |
+          net.bridge.bridge-nf-call-ip6tables = 1
+          net.bridge.bridge-nf-call-iptables  = 1
+          net.ipv4.ip_forward                 = 1
+      notify: Apply Kernel Settings
+
+    - name: Install required packages
+      apt:
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - gnupg
+          - lsb-release
+        state: present
+        update_cache: yes
+
+    - name: Get Ubuntu codename
+      shell: lsb_release -cs
+      register: ubuntu_codename
+      changed_when: false
+
+    # - name: Add Docker GPG key
+    #   ansible.builtin.apt_key:
+    #     url: https://download.docker.com/linux/ubuntu/gpg
+    #     state: present
+
+    # - name: Add Docker repository
+    #   ansible.builtin.apt_repository:
+    #     repo: "deb [arch=arm64] https://download.docker.com/linux/ubuntu {{ ubuntu_codename.stdout }} stable"
+    #     state: present
+
+    - name: Add Docker repository key
+      shell: curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+
+    - name: Add Docker repository
+      copy:
+        dest: /etc/apt/sources.list.d/docker.list
+        content: |
+          deb [arch=arm64 signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu {{ ubuntu_codename.stdout }} stable
+
+    - name: Install containerd runtime
+      apt:
+        name: containerd.io
+        state: present
+        update_cache: yes
+
+    - name: Configure containerd
+      shell: |
+        containerd config default > /etc/containerd/config.toml
+        sed -i 's/SystemdCgroup = false/SystemdCgroup = true/g' /etc/containerd/config.toml
+      notify: Restart containerd
+
+    - name: Enable and start containerd
+      systemd:
+        name: containerd
+        state: started
+        enabled: yes
+
+    - name: Add Kubernetes repository key
+      shell: curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.33/deb/Release.key | gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+
+    - name: Add Kubernetes repository
+      copy:
+        dest: /etc/apt/sources.list.d/kubernetes.list
+        content: |
+          deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.33/deb/ /
+
+    - name: Install Kubernetes components
+      apt:
+        name:
+          - kubeadm
+          - kubelet
+          - kubectl
+          - ipvsadm
+          - containerd
+        state: present
+        update_cache: yes
+
+    - name: Enable SSH password authentication
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^PasswordAuthentication '
+        line: 'PasswordAuthentication yes'
+
+    - name: Permit root login
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        line: 'PermitRootLogin yes'
+
+    - name: Reload SSH service
+      systemd:
+        name: sshd
+        state: reloaded
+
+    - name: Set root password
+      user:
+        name: root
+        password: "{{ 'kubeadmin' | password_hash('sha512') }}"
+
+    - name: Ensure vagrant insecure key is authorized
+      authorized_key:
+        user: vagrant
+        state: present
+        key: "{{ lookup('pipe', 'ssh-keygen -y -f ~/.vagrant.d/insecure_private_key') }}"
+
+    - name: Set terminal environment
+      lineinfile:
+        path: /etc/bash.bashrc
+        line: "export TERM=xterm"
+
+    - name: Update /etc/hosts dynamically
+      blockinfile:
+        path: /etc/hosts
+        marker: "# {mark} ANSIBLE MANAGED HOSTS"
+        block: |
+          {% for host in groups['all'] %}
+          {{ hostvars[host]['ansible_host'] | default(host) }}   {{ host }}   {{ hostvars[host]['inventory_hostname'] }}
+          {% endfor %}
+
+    - name: Extend root logical volume to use all free space
+      ansible.builtin.shell: |
+        lvextend -l +100%FREE /dev/ubuntu-vg/ubuntu-lv
+        resize2fs /dev/ubuntu-vg/ubuntu-lv
+      register: lvm_extend_result
+      changed_when: "'nothing to do' not in lvm_extend_result.stdout"
+      when: ansible_mounts[0].device == "/dev/mapper/ubuntu--vg-ubuntu--lv"
+
+    - name: Setup command alias
+      lineinfile:
+        path: ~/.bashrc
+        line: "{{ item }}"
+      loop:
+        - "alias crictl='crictl -runtime-endpoint unix:///run/containerd/containerd.sock'"
+        - "alias k='kubectl'"
+
+  handlers:
+    - name: Load Kernel Modules
+      command: modprobe overlay && modprobe br_netfilter
+
+    - name: Apply Kernel Settings
+      command: sysctl --system
+
+    - name: Restart containerd
+      systemd:
+        name: containerd
+        state: restarted

@@ -1,0 +1,101 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cert-manager
+  namespace: argocd
+  finalizers:
+    - argoproj.io/resources-finalizer
+  annotations:
+    notifications.argoproj.io/subscribe.on-deployed.telegram: "-4670849445"
+    notifications.argoproj.io/subscribe.on-sync-failed.telegram: "-4670849445"
+    notifications.argoproj.io/subscribe.on-health-degraded.telegram: "-4670849445"
+    notifications.argoproj.io/subscribe.on-sync-succeeded.telegram: "-4670849445"
+    notifications.argoproj.io/subscribe.on-out-of-sync.telegram: "-4670849445"
+spec:
+  project: default
+  source:
+    repoURL: https://charts.jetstack.io
+    chart: cert-manager
+    targetRevision: v1.16.2
+    helm:
+      parameters:
+        - name: crds.enabled
+          value: "true"
+        - name: crds.keep
+          value: "false"
+        - name: startupapicheck.enabled
+          value: "false"
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: cert-manager
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      enabled: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+      - Replace=true
+      - SkipDryRunOnMissingResource=true
+    retry:
+      limit: 2
+      backoff:
+        duration: 5s
+        maxDuration: 3m0s
+        factor: 2
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kargo
+  namespace: argocd
+  finalizers:
+    - argoproj.io/resources-finalizer
+  annotations:
+    notifications.argoproj.io/subscribe.on-deployed.telegram: "-4670849445"
+    notifications.argoproj.io/subscribe.on-sync-failed.telegram: "-4670849445"
+    notifications.argoproj.io/subscribe.on-health-degraded.telegram: "-4670849445"
+    notifications.argoproj.io/subscribe.on-sync-succeeded.telegram: "-4670849445"
+    notifications.argoproj.io/subscribe.on-out-of-sync.telegram: "-4670849445"
+spec:
+  project: default
+  source:
+    repoURL: ghcr.io/akuity/kargo-charts
+    chart: kargo
+    targetRevision: "1.7.5"  # Use latest stable version
+    helm:
+      parameters:
+        - name: api.adminAccount.passwordHash
+          # Note: A bcrypt-hashed password will contain `$` characters that
+          # MUST each be escaped as `$$`
+          value: $$2y$$10$$kFI3Y.TJEO2t2UptYK1Bfu0M4V2/G/Ee2L6kVAEMK3At33qiVwZli
+        - name: api.adminAccount.tokenSigningKey
+          value: 7S0F3ss6jI8YZbbLOuDjba1Z25ATGLdS
+        - name: api.tls.enabled
+          value: "false"
+        - name: crds.install
+          value: "true"
+        - name: crds.keep
+          value: "false"
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kargo
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      enabled: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+      - Replace=true
+      - SkipDryRunOnMissingResource=true
+    retry:
+      limit: 2
+      backoff:
+        duration: 5s
+        maxDuration: 3m0s
+        factor: 2
+
+# gDL1xk8oAX3v4EEOJfBkZQnIvtqMfUe4

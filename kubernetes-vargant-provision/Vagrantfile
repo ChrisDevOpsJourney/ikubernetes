@@ -3,73 +3,72 @@
 
 ENV['VAGRANT_NO_PARALLEL'] = 'yes'
 
-VAGRANT_BOX         = "generic/ubuntu2204"
-VAGRANT_BOX_VERSION = "4.2.10"
+VAGRANT_BOX         = "bento/ubuntu-22.04-arm64"
+VAGRANT_BOX_VERSION = "202401.31.0"
 CPUS_MASTER_NODE    = 2
-CPUS_WORKER_NODE    = 4
+CPUS_WORKER_NODE    = 2
 MEMORY_MASTER_NODE  = 4096
 MEMORY_WORKER_NODE  = 4096
-WORKER_NODES_COUNT  = 2
+WORKER_NODES_COUNT  = 4
 
 Vagrant.configure(2) do |config|
-
-  config.vm.provision "shell", path: "bootstrap.sh"
+  # config.vm.provision "shell", path: "bootstrap.sh"
+  config.vm.provision "ansible" do |ansible|
+    ansible.playbook = "bootstrap.yml"
+    ansible.inventory_path = "inventory.ini"
+  end
 
   # Kubernetes Master Server
   config.vm.define "kmaster" do |node|
-  
     node.vm.box = VAGRANT_BOX
     node.vm.box_check_update = false
     node.vm.box_version = VAGRANT_BOX_VERSION
     node.vm.hostname = "kmaster.example.com"
     node.vm.network "private_network", ip: "192.168.10.100"
-  
-    node.vm.provider "virtualbox" do |v|
-      v.name = "kmaster"
+
+    node.vm.provider "vmware_desktop" do |v|
       v.memory = MEMORY_MASTER_NODE
       v.cpus = CPUS_MASTER_NODE
-    end
-  
-    node.vm.provider :libvirt do |v|
-      v.memory = MEMORY_WORKER_NODE
-      v.nested = true
-      v.cpus = CPUS_WORKER_NODE
-    end
-  
-    node.vm.provision "shell", path: "bootstrap-master.sh"
-  
-  end
 
+      # 👇 Explicitly set PCI slot numbers for the network interfaces.
+      # Vagrant currently overwrites these automatically in the .vmx file,
+      # but in future releases it will stop doing so.
+      # If not set, networking may fail to configure correctly once Vagrant
+      # changes its behavior.
+      # These values ("160" and "224") come directly from the warning messages
+      # shown during `vagrant up`. Adjust them if future warnings show different numbers.
+      v.vmx["ethernet0.pcislotnumber"] = "160"
+      v.vmx["ethernet1.pcislotnumber"] = "224"
+    end
+
+    node.vm.provision "ansible" do |ansible|
+      ansible.compatibility_mode = "2.0"
+      ansible.playbook = "bootstrap-master.yml"
+      ansible.inventory_path = "inventory.ini"
+    end
+  end
 
   # Kubernetes Worker Nodes
   NodeCount = WORKER_NODES_COUNT
 
   (1..NodeCount).each do |i|
-
     config.vm.define "kworker#{i}" do |node|
-
       node.vm.box = VAGRANT_BOX
       node.vm.box_check_update = false
       node.vm.box_version = VAGRANT_BOX_VERSION
       node.vm.hostname = "kworker#{i}.example.com"
       node.vm.network "private_network", ip: "192.168.10.10#{i}"
 
-      node.vm.provider "virtualbox" do |v|
-        v.name = "kworker#{i}"
+      node.vm.provider "vmware_desktop" do |v|
         v.memory = MEMORY_WORKER_NODE
         v.cpus = CPUS_WORKER_NODE
       end
 
-      node.vm.provider :libvirt do |v|
-        v.memory = MEMORY_WORKER_NODE
-        v.nested = true
-        v.cpus = CPUS_WORKER_NODE
+      node.vm.provision "ansible" do |ansible|
+        ansible.compatibility_mode = "2.0"
+        ansible.playbook = "bootstrap-worker.yml"
+        ansible.inventory_path = "inventory.ini"
       end
-
-      node.vm.provision "shell", path: "bootstrap-worker.sh"
-
     end
-
   end
-
 end
